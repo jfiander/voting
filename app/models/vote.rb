@@ -16,25 +16,25 @@ class Vote < ApplicationRecord
   end
 
   def self.random_gen(iter = 10)
-    start_time    = Time.now
-    initial_count = Vote.count
+    # Generate some random votes
+
+    start_time       = Time.now
+    initial_count    = Vote.count
+    candidates_count = Candidate.count
 
     iter.times do
-      # Generate some random votes
-
-      candidates_count = Candidate.count
       # Determine number of votes to cast
       preferences = Random.rand(1..candidates_count)
 
       # Determine candidates voted for
       candidates = []
       preferences.times do |pref|
-        candidate = Candidate.find_by(id: Random.rand(1..candidates_count)) while candidates.include?(candidate) || candidate.blank?
+        candidate = Random.rand(1..candidates_count) while candidates.include?(candidate) || candidate.blank?
         candidates << candidate
       end
 
       # Build preferences hash
-      vote_hash = Hash[(1..preferences).map(&:to_s).zip(candidates.map(&:id).map(&:to_s))]
+      vote_hash = Hash[(1..preferences).map(&:to_s).zip(candidates.map(&:to_s))]
 
       Vote.create(preferences_hash: vote_hash)
     end
