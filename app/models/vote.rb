@@ -88,7 +88,7 @@ class Vote < ApplicationRecord
     # Map rounds keys to candidates
     rounds = rounds.map do |round, counts|
       counts = counts.map do |candidate_id, vote_count|
-        {Candidate.find_by(id: candidate_id) => vote_count}
+        {Candidate.find_by(id: candidate_id).slice(:name, :party_id).symbolize_keys.map { |k,v| k == :party_id ? {party: Party.get(v).name} : {k => v} }.reduce({}, :merge) => vote_count}
       end
 
       {
