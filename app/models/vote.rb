@@ -17,19 +17,24 @@ class Vote < ApplicationRecord
 
   def self.random_gen(iter = 10)
     # Generate some random votes
-
     start_time       = Time.now
+    logger.info { "→ #{time_since(start_time)}: Initializing..." }
+
     initial_count    = Vote.count
     candidates_count = Candidate.count
 
-    iter.times do
+    logger.info { "→ #{time_since(start_time)}: Generating #{iter} random ballots..." }
+    iter.times do |i|
+      logger.info { "→ #{time_since(start_time)}:   Generating random ballot \##{i+1}..." }
       # Determine number of votes to cast
       preferences = Random.rand(1..candidates_count)
+      logger.info { "→ #{time_since(start_time)}:     Selecting #{preferences} random votes..." }
 
       # Determine candidates voted for
       candidates = []
       preferences.times do |pref|
         candidate = Random.rand(1..candidates_count) while candidates.include?(candidate) || candidate.blank?
+        logger.info { "→ #{time_since(start_time)}:       Vote for candidate \##{candidate}." }
         candidates << candidate
       end
 
@@ -37,10 +42,11 @@ class Vote < ApplicationRecord
       vote_hash = Hash[(1..preferences).map(&:to_s).zip(candidates.map(&:to_s))]
 
       Vote.create(preferences_hash: vote_hash)
+      logger.info { "→ #{time_since(start_time)}:     Ballot \##{i+1} generated." }
     end
   ensure
-    logger.info { "Generated #{Vote.count - initial_count} new votes" }
-    logger.info { "Took #{time_since(start_time)}" }
+    logger.info { "→ Generated #{Vote.count - initial_count} new votes" }
+    logger.info { "→ Took #{time_since(start_time)}" }
   end
 
   def self.rank
@@ -122,7 +128,7 @@ class Vote < ApplicationRecord
       end
     end
 
-    logger.info { "Took #{time_since(start_time)}" }
+    logger.info { "→ Took #{time_since(start_time)}" }
 
     {
       winner: winner_hash.reduce({}, :merge),
