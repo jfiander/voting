@@ -44,6 +44,8 @@ class Vote < ApplicationRecord
   end
 
   def self.rank
+    start_time = Time.now
+
     votes = Vote.all
     vote_preferences = votes.map(&:preferences)
     rounds = {}
@@ -105,6 +107,8 @@ class Vote < ApplicationRecord
         {key => value}
       end
     end
+
+    logger.info { "Took #{(Time.now - start_time).round(2)} seconds" }
 
     {
       winner: winner_hash.reduce({}, :merge),
