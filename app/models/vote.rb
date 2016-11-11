@@ -16,7 +16,8 @@ class Vote < ApplicationRecord
   end
 
   def self.random_gen(iter = 10)
-    start_time = Time.now
+    start_time    = Time.now
+    initial_count = Vote.count
 
     iter.times do
       # Generate some random votes
@@ -37,8 +38,9 @@ class Vote < ApplicationRecord
 
       Vote.create(preferences_hash: vote_hash)
     end
-
-    puts "Took #{(Time.now - start_time).round(2)} seconds"
+  ensure
+    logger.info { "Generated #{Vote.count - initial_count} new votes" }
+    logger.info { "Took #{(Time.now - start_time).round(2)} seconds" }
   end
 
   def self.rank
