@@ -52,26 +52,19 @@ class Vote < ApplicationRecord
     winner = nil
     round  = 1
     while winner.nil?
-      if round == 1
-        prefs = vote_preferences.map do |vote|
-          vote[round]
-        end
-        rounds[round] = prefs.each_with_object(Hash.new(0)) { |h1, h2| h2[h1] += 1 }
-      else
-        rounds[round] = {}
+      rounds[round] = {}
 
-        # Initialize empty counts for remaining viable candidates
-        viable_candidates.each do |viable|
-          rounds[round][viable] = 0
-        end
+      # Initialize empty counts for remaining viable candidates
+      viable_candidates.each do |viable|
+        rounds[round][viable] = 0
+      end
 
-        # Increment rounds[round][viable] for each vote that now has viable as its highest-ranked viable_candidate
-        vote_preferences.each do |vote|
-          (1..vote.count).each do |rank|
-            if viable_candidates.include?(vote[rank])
-              rounds[round][vote[rank]] += 1
-              break
-            end
+      # Increment count for the candidate that has the highest-ranked viable preference of each vote
+      vote_preferences.each do |vote|
+        (1..vote.count).each do |rank|
+          if viable_candidates.include?(vote[rank])
+            rounds[round][vote[rank]] += 1
+            break
           end
         end
       end
