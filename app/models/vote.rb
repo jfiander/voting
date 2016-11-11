@@ -99,8 +99,16 @@ class Vote < ApplicationRecord
       }
     end
 
+    winner_hash = Candidate.find_by(id: winner).slice(:id, :name, :party_id).symbolize_keys.map do |key, value|
+      if key == :party_id
+        {party: Party.get(value).name}
+      else
+        {key => value}
+      end
+    end
+
     {
-      winner: Candidate.find_by(id: winner).slice(:id, :name, :party_id).symbolize_keys,
+      winner: winner_hash.reduce({}, :merge),
       rounds: rounds.reduce({}, :merge)
     }
   end
