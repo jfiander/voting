@@ -10,13 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20161111145930) do
+ActiveRecord::Schema.define(version: 20161111202443) do
 
   create_table "candidates", force: :cascade do |t|
     t.string   "name"
-    t.integer  "party_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.integer  "party_id",   default: 1
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
   end
 
   create_table "parties", force: :cascade do |t|
