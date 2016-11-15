@@ -49,21 +49,42 @@ class Vote < ApplicationRecord
     logger.info { "→ Took #{time_since(start_time)}" }
   end
 
-  def self.rank
+  def self.rank(batches: true, test: false)
     start_time = Time.now
     logger.info { "→ #{time_since(start_time)}: Initializing..." }
+    logger.info { "→ #{time_since(start_time)}:   Loading light data..." }
 
-    votes             = Vote.all
-    parties           = Party.all
-    candidates        = Candidate.all
-    viable_candidates = candidates.map(&:id)
+    candidates        = Candidate.joins(:party).select("candidates.id, candidates.name, parties.name AS party").all.map(&:attributes).map(&:symbolize_keys!)
+    viable_candidates = candidates.pluck(:id)
     candidate_count   = viable_candidates.count
     winner            = nil
     round             = 1
     rounds            = {}
+    batches           = false if test
 
-    logger.info { "→ #{time_since(start_time)}: Mapping votes..." }
-    vote_preferences = votes.map(&:preferences)
+    in_batches = batches ? " in batches" : ""
+    logger.info { "→ #{time_since(start_time)}:   Loading and mapping votes#{in_batches}..." }
+    if batches
+      batch_size = 100000
+      vote_preferences = {}
+      Vote.find_in_batches(batch_size: batch_size).map.with_index do |group, index|
+        vote_preferences[index] = group.map do |vote|
+          vote.preferences
+        end
+
+        logger.info { "→ #{time_since(start_time)}:     Mapped #{index+1} #{'batch'.pluralize(index+1)} of #{batch_size} votes..." }
+      end
+
+      vote_preferences = vote_preferences.values.flatten
+    else
+       votes = if test
+        Vote.limit(10000)
+      else
+        Vote.all
+      end
+
+      vote_preferences = votes.map(&:preferences)
+    end
 
     logger.info { "→ #{time_since(start_time)}: Initialization complete. Calculating preferences..." }
     while winner.nil?
@@ -90,18 +111,23 @@ class Vote < ApplicationRecord
       round_total = rounds[round].values.sum
       logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{round_total}." }
 
-      # Determine if one candidate has a majority of votes for viable candidates
-      rounds[round].each do |candidate, vote_count|
-        if vote_count > ( (round_total.to_f / 2) + 1 )
-          winner = candidate
-          logger.info { "→ #{time_since(start_time)}:   Candidate \##{winner} (#{candidates.select { |c| c.id == winner }.first.name}) has been elected." }
-        end
-      end
-
       # Remove lowest scoring candidate from the viable candidates pool
       lowest = rounds[round].min_by { |candidate, vote_count| vote_count }
       viable_candidates = (viable_candidates - [lowest.first])
-      logger.info { "→ #{time_since(start_time)}:   Candidate \##{lowest} (#{candidates.select { |c| c.id == lowest.first }.first.name}) has been rejected." }
+      logger.info do
+        candidate = candidates.select { |c| c[:id] == lowest.first }.first
+        "→ #{time_since(start_time)}:   Candidate \##{candidate[:id]} (#{candidate[:name]} , #{candidate[:party]}, #{lowest.last} votes) has been rejected."
+      end
+
+      # Determine if one candidate has a majority of votes for viable candidates
+      rounds[round].each do |candidate, vote_count|
+        if vote_count > ( (round_total.to_f / 2) + 1 )
+          logger.info do
+            winner = candidates.select { |c| c[:id] == candidate }.first
+            "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]} , #{winner[:party]}, #{vote_count} votes) has been elected."
+          end
+        end
+      end
 
       logger.info { "→ #{time_since(start_time)}:   Completed round \##{round}." }
       # Increment round
@@ -112,7 +138,7 @@ class Vote < ApplicationRecord
     # Map rounds keys to candidates
     rounds = rounds.map do |round, counts|
       counts = counts.map do |candidate_id, vote_count|
-        {candidates.select { |c| c.id == candidate_id }.first.slice(:name, :party_id).symbolize_keys.map { |k,v| k == :party_id ? {party: parties.select { |p| p.id == v }.first.name} : {k => v} }.reduce({}, :merge) => vote_count}
+        {candidates.select { |c| c[:id] == candidate_id }.first => vote_count}
       end
 
       {
@@ -120,18 +146,10 @@ class Vote < ApplicationRecord
       }
     end
 
-    winner_hash = candidates.select {|c| c.id == winner }.first.slice(:id, :name, :party_id).symbolize_keys.map do |key, value|
-      if key == :party_id
-        {party: parties.select { |p| p.id == value }.first.name}
-      else
-        {key => value}
-      end
-    end
-
     logger.info { "→ Took #{time_since(start_time)}" }
 
     {
-      winner: winner_hash.reduce({}, :merge),
+      winner: winner,
       rounds: rounds.reduce({}, :merge)
     }
   end
