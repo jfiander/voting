@@ -78,7 +78,11 @@ class Vote < ApplicationRecord
       vote_preferences = vote_preferences.values.flatten
     else
        votes = if test
-        Vote.limit(10000)
+        if test.is_a? Integer
+          Vote.limit(test)
+        else
+          Vote.limit(10000)
+        end
       else
         Vote.all
       end
