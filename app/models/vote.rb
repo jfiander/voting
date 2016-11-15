@@ -163,6 +163,9 @@ class Vote < ApplicationRecord
           unless winner.present?
             # True tie; decide winner randomly from tied candidates
             winner = tie[Random.rand(0..tie.count-1)]
+            logger.info do
+              "→ #{time_since(start_time)}:   * Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}) has been randomly selected and has been elected."
+            end
           end
         end
       else
