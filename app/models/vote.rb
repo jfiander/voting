@@ -79,18 +79,23 @@ class Vote < ApplicationRecord
     else
        votes = if test
         if test.is_a? Integer
+          logger.info { "→ #{time_since(start_time)}:     Selecting first #{test} votes..." }
           Vote.limit(test)
         elsif test.is_a? Array
           bottom = test[0]-1 > 0 ? test[0]-1 : 0
           top    = test[1] > bottom ? test[1] : 10000
+          logger.info { "→ #{time_since(start_time)}:     Selecting votes #{bottom+1} thru #{top}..." }
           Vote.offset(bottom).limit(top-bottom-1)
         else
+          logger.info { "→ #{time_since(start_time)}:     Selecting first 10000 votes..." }
           Vote.limit(10000)
         end
       else
+        logger.info { "→ #{time_since(start_time)}:     Selecting all votes in one batch..." }
         Vote.all
       end
 
+      logger.info { "→ #{time_since(start_time)}:     Mapping all votes to preferences..." }
       vote_preferences = votes.map(&:preferences)
     end
 
