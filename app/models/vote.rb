@@ -27,11 +27,12 @@ class Vote < ApplicationRecord
     logger.info { "→ #{time_since(start_time)}: Generating #{iter} random ballots#{bias_description}..." }
     iter.times do |i|
       candidate_ids = valid_candidates
+      preferences = Random.rand(1..candidate_ids.count)
       vote_hash = if bias.present?
         candidate_ids = candidate_ids - [bias[1]]
-        Hash[(1..Random.rand(1..candidate_ids.count)).to_a.zip(candidate_ids.shuffle.first(Random.rand(1..candidate_ids.count)).insert(bias[0]-1, bias[1]))].reject { |k,v| v.nil? }
+        Hash[(1..preferences).to_a.zip(candidate_ids.shuffle.first(preferences-1).insert(bias[0]-1, bias[1]))]
       else
-        Hash[(1..Random.rand(1..candidate_ids.count)).to_a.zip(candidate_ids.shuffle.first(Random.rand(1..candidate_ids.count)))].reject { |k,v| v.nil? }
+        Hash[(1..preferences).to_a.zip(candidate_ids.shuffle.first(preferences))]
       end
 
       votes << vote_hash
