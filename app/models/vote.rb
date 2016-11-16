@@ -114,7 +114,7 @@ class Vote < ApplicationRecord
       viable_candidates.each do |viable|
         rounds[round][viable] = 0
       end
-      logger.info { "→ #{time_since(start_time)}:   Viable candidates for round \##{round}: #{viable_candidates.count}..." }
+      logger.info { "→ #{time_since(start_time)}:   Viable candidates for round \##{round}: #{viable_candidates.count}" }
 
       # Increment count for the candidate that has the highest-ranked viable preference of each vote
       vote_preferences.each do |vote|
@@ -128,7 +128,7 @@ class Vote < ApplicationRecord
 
       # Count the total number of votes for viable candidates in this round
       round_total = rounds[round].values.sum
-      logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{round_total} (#{(100*round_total.to_f / total_votes).round(2)} %)." }
+      logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{round_total} (#{(100*round_total.to_f / total_votes).round(2)} %)" }
 
       # Remove lowest scoring candidate from the viable candidates pool
       lowest = rounds[round].min_by { |candidate, vote_count| vote_count }
