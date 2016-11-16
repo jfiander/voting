@@ -7,45 +7,43 @@ class Vote < ApplicationRecord
     hash.reduce({}, :merge)
   end
 
-  def store_preferences(hash)
-    preferences_hash = "{"
-    preferences_hash += hash.map { |preference, candidate| "\"#{preference}\"=>\"#{candidate.id}\""}.join(",")
-    preferences_hash += "}"
-
-    self.update(preferences_hash: preferences_hash)
+  def self.format_preferences(hash)
+    "{#{hash.map { |preference, candidate| "\"#{preference}\"=>\"#{candidate}\""}.join(",")}}"
   end
 
-  def self.random_gen(iter = 10)
+  def self.random_gen(iter = 10, bias: [])
     # Generate some random votes
     start_time       = Time.now
     logger.info { "→ #{time_since(start_time)}: Initializing..." }
 
     initial_count    = Vote.count
     candidates_count = Candidate.count
+    valid_candidates = Candidate.all.map(&:id)
 
-    logger.info { "→ #{time_since(start_time)}: Generating #{iter} random ballots..." }
+    votes = []
+
+    bias_description = bias.present? ? " biased with candidate #{bias[1]} at preference #{bias[0]}" : ""
+
+    logger.info { "→ #{time_since(start_time)}: Generating #{iter} random ballots#{bias_description}..." }
     iter.times do |i|
-      logger.info { "→ #{time_since(start_time)}:   Generating random ballot \##{i+1}..." }
-      # Determine number of votes to cast
-      preferences = Random.rand(1..candidates_count)
-      logger.info { "→ #{time_since(start_time)}:     Selecting #{preferences} random votes..." }
-
-      # Determine candidates voted for
-      candidates = []
-      preferences.times do |pref|
-        candidate = Random.rand(1..candidates_count) while candidates.include?(candidate) || candidate.blank?
-        logger.info { "→ #{time_since(start_time)}:       Vote for candidate \##{candidate}." }
-        candidates << candidate
+      candidate_ids = valid_candidates
+      vote_hash = if bias.present?
+        candidate_ids = candidate_ids - [bias[1]]
+        Hash[(1..Random.rand(1..candidate_ids.count)).to_a.zip(candidate_ids.shuffle.first(Random.rand(1..candidate_ids.count)).insert(bias[0]-1, bias[1]))].reject { |k,v| v.nil? }
+      else
+        Hash[(1..Random.rand(1..candidate_ids.count)).to_a.zip(candidate_ids.shuffle.first(Random.rand(1..candidate_ids.count)))].reject { |k,v| v.nil? }
       end
 
-      # Build preferences hash
-      vote_hash = Hash[(1..preferences).map(&:to_s).zip(candidates.map(&:to_s))]
+      votes << vote_hash
+    end
 
-      Vote.create(preferences_hash: vote_hash)
-      logger.info { "→ #{time_since(start_time)}:     Ballot \##{i+1} generated." }
+    Vote.bulk_insert do |w|
+      votes.each do |v|
+        w.add(preferences_hash: Vote.format_preferences(v))
+      end
     end
   ensure
-    logger.info { "→ Generated #{Vote.count - initial_count} new votes" }
+    logger.info { "→ Generated #{Vote.count - initial_count} new votes#{bias_description}" }
     logger.info { "→ Took #{time_since(start_time)}" }
   end
 

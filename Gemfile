@@ -34,6 +34,8 @@ gem 'awesome_print'
 
 gem 'slim'
 
+gem 'bulk_insert'
+
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'byebug', platform: :mri
