@@ -80,6 +80,10 @@ class Vote < ApplicationRecord
        votes = if test
         if test.is_a? Integer
           Vote.limit(test)
+        elsif test.is_a? Array
+          bottom = test[0]-1 > 0 ? test[0]-1 : 0
+          top    = test[1] > bottom ? test[1] : 10000
+          Vote.offset(bottom).limit(top-bottom-1)
         else
           Vote.limit(10000)
         end
