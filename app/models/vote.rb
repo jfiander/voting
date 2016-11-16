@@ -65,7 +65,9 @@ class Vote < ApplicationRecord
     in_batches = batches ? " in batches" : ""
     logger.info { "→ #{time_since(start_time)}:   Loading and mapping votes#{in_batches}..." }
     if batches
-      batch_size = 100000
+      batch_size  = 100000
+      total_votes = Vote.count
+      logger.info { "→ #{time_since(start_time)}:   Total votes: #{total_votes}" }
       vote_preferences = {}
       Vote.find_in_batches(batch_size: batch_size).map.with_index do |group, index|
         vote_preferences[index] = group.map do |vote|
@@ -99,6 +101,8 @@ class Vote < ApplicationRecord
       vote_preferences = votes.map(&:preferences)
     end
 
+    total_votes = vote_preferences.count
+
     logger.info { "→ #{time_since(start_time)}: Initialization complete. Calculating preferences..." }
     while winner.nil?
       logger.info { "→ #{time_since(start_time)}: Beginning round \##{round}..." }
@@ -122,7 +126,7 @@ class Vote < ApplicationRecord
 
       # Count the total number of votes for viable candidates in this round
       round_total = rounds[round].values.sum
-      logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{round_total}." }
+      logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{round_total} (#{(100*round_total.to_f / total_votes).round(2)} %)." }
 
       # Remove lowest scoring candidate from the viable candidates pool
       lowest = rounds[round].min_by { |candidate, vote_count| vote_count }
