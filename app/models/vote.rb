@@ -1,4 +1,6 @@
 class Vote < ApplicationRecord
+  validates :preferences_hash, presence: true
+
   def preferences
     hash = JSON.parse(self.preferences_hash.gsub('=>', ':')).map do |preference, candidate_id|
       {preference.to_i => candidate_id.to_i}
