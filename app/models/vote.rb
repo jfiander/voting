@@ -200,14 +200,13 @@ class Vote < ApplicationRecord
             logger.info do
               "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{vote_count} votes) has been elected."
             end
-            break
           else
             winner = candidates.select { |c| c[:id] == candidate }.first
             logger.info do
               "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{vote_count} votes) has been elected."
             end
-            break
           end
+          break
         end
       end
 
