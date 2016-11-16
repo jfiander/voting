@@ -198,12 +198,12 @@ class Vote < ApplicationRecord
           if viable_candidates.count == 1
             winner = candidates.select { |c| c[:id] == viable_candidates.first }.first
             logger.info do
-              "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{vote_count} votes) has been elected."
+              "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes) has been elected."
             end
           else
             winner = candidates.select { |c| c[:id] == candidate }.first
             logger.info do
-              "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{vote_count} votes) has been elected."
+              "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes) has been elected."
             end
           end
           break
