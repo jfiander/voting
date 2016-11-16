@@ -12,6 +12,7 @@ class Vote < ApplicationRecord
   end
 
   def self.random_gen(iter = 10, bias: [])
+    raise "Error: Cannot generate more than 1,000,000 ballots at a time." if iter > 1000000
     # Generate some random votes
     start_time       = Time.now
     logger.info { "→ #{time_since(start_time)}: Initializing..." }
