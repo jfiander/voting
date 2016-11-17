@@ -219,16 +219,13 @@ class Vote < ApplicationRecord
       # Determine if one candidate has a majority of votes for viable candidates
       rounds[round].each do |candidate, vote_count|
         if vote_count >= ( (round_total.to_f / 2).floor + 1 ) || viable_candidates.count == 1
-          if viable_candidates.count == 1
-            winner = candidates.select { |c| c[:id] == viable_candidates.first }.first
-            logger.info do
-              "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes) has been elected."
-            end
+          winner = if viable_candidates.count == 1
+            candidates.select { |c| c[:id] == viable_candidates.first }.first
           else
-            winner = candidates.select { |c| c[:id] == candidate }.first
-            logger.info do
-              "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes) has been elected."
-            end
+            candidates.select { |c| c[:id] == candidate }.first
+          end
+          logger.info do
+            "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes) has been elected."
           end
           break
         end
