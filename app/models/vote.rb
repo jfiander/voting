@@ -92,7 +92,7 @@ class Vote < ApplicationRecord
     if batches
       total_votes = Vote.where(election: election).count
       num_batches = (total_votes.to_f / batch_size).ceil
-      logger.info { "→ #{time_since(start_time)}:   Total votes: #{total_votes} (#{num_batches} batches)" }
+      logger.info { "→ #{time_since(start_time)}:   Total votes: #{total_votes} (#{num_batches} #{'batch'.pluralize(num_batches)})" }
       vote_preferences = {}
       Vote.where(election: election).find_in_batches(batch_size: batch_size).map.with_index do |group, index|
         vote_preferences[index] = group.map do |vote|
