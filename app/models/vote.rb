@@ -154,65 +154,68 @@ class Vote < ApplicationRecord
       round_total = rounds[round].values.sum
       logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{round_total} (#{(100*round_total.to_f / total_votes).round(2)} %)" }
 
-      # Remove lowest scoring candidate from the viable candidates pool
-      lowest = rounds[round].min_by { |candidate, vote_count| vote_count }
+      # Skip if there is a winner
+      unless Vote.winner? rounds[round]
+        # Remove lowest scoring candidate from the viable candidates pool
+        lowest = rounds[round].min_by { |candidate, vote_count| vote_count }
 
-      # Detect any ties
-      if rounds[round].values.select { |v| v == lowest.last }.count > 1
-        # Check if there's at least one candidate above the tie; if not, enter tie breaker
-        if rounds[round].values.select { |v| v > lowest.last }.count >= 1
-          # Tie does not involve leader; redistribute all votes and proceed
-          lowests = rounds[round].select { |_,v| v == lowest.last }
-          lowests.each do |id, votes|
-            viable_candidates = (viable_candidates - [id])
+        # Detect any ties
+        if rounds[round].values.select { |v| v == lowest.last }.count > 1
+          # Check if there's at least one candidate above the tie; if not, enter tie breaker
+          if rounds[round].values.select { |v| v > lowest.last }.count >= 1
+            # Tie does not involve leader; redistribute all votes and proceed
+            lowests = rounds[round].select { |_,v| v == lowest.last }
+            lowests.each do |id, votes|
+              viable_candidates = (viable_candidates - [id])
+              logger.info do
+                candidate = candidates.select { |c| c[:id] == id }.first
+                "→ #{time_since(start_time)}:   Candidate \##{candidate[:id]} (#{candidate[:name]}, #{candidate[:party]}, #{votes} votes) has been rejected."
+              end
+            end
+          else
+            # Tie involves leader; winner is determined by highest number of first preference votes; else second; else third; etc. 
+            # In case of true tie, winner is determined randomly
+            tie     = rounds[round].keys
+            logger.info { "→ #{time_since(start_time)}:   * Leading tie detected..." }
             logger.info do
-              candidate = candidates.select { |c| c[:id] == id }.first
-              "→ #{time_since(start_time)}:   Candidate \##{candidate[:id]} (#{candidate[:name]}, #{candidate[:party]}, #{votes} votes) has been rejected."
+              tie_str = tie.map { |id| candidates.select { |c| c[:id] == id }.first }.map { |c| "\##{c[:id]}: #{c[:name]} (#{c[:party]})" }.join(", ")
+              "              * Tied candidates: #{tie_str}"
+            end
+            logger.info { "              * Votes: #{rounds[round].first.last}" }
+            
+            tied = true
+            pref = 1
+            while tied
+              votes_for_pref = vote_preferences.map { |v| v[pref] }.group_by { |n| n }.map { |c,v| {c => v.count} }.reduce({}, :merge)
+              max_votes_for_pref = votes_for_pref.max_by { |k,v| v }.last
+              logger.info { "→ #{time_since(start_time)}:   * Highest #{pref}#{pref.ordinal} preference votes: #{max_votes_for_pref}" }
+
+              if votes_for_pref.select { |k,v| v == max_votes_for_pref }.count == 1
+                winner = candidates.select { |c| c[:id] == votes_for_pref.select { |k,v| v == max_votes_for_pref }.first.first }.first
+                logger.info do
+                  "→ #{time_since(start_time)}:   * Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}) has won the tie by #{pref}#{pref.ordinal} preference votes and has been elected."
+                end
+                break
+              else
+                pref += 1
+              end
+            end
+
+            unless winner.present?
+              # True tie; decide winner randomly from tied candidates
+              winner = tie[Random.rand(0..tie.count-1)]
+              logger.info do
+                "→ #{time_since(start_time)}:   * Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}) has been randomly selected and has been elected."
+              end
             end
           end
         else
-          # Tie involves leader; winner is determined by highest number of first preference votes; else second; else third; etc. 
-          # In case of true tie, winner is determined randomly
-          tie     = rounds[round].keys
-          logger.info { "→ #{time_since(start_time)}:   * Leading tie detected..." }
+          # No tie detected
+          viable_candidates = (viable_candidates - [lowest.first])
           logger.info do
-            tie_str = tie.map { |id| candidates.select { |c| c[:id] == id }.first }.map { |c| "\##{c[:id]}: #{c[:name]} (#{c[:party]})" }.join(", ")
-            "              * Tied candidates: #{tie_str}"
+            candidate = candidates.select { |c| c[:id] == lowest.first }.first
+            "→ #{time_since(start_time)}:   Candidate \##{candidate[:id]} (#{candidate[:name]}, #{candidate[:party]}, #{lowest.last} votes) has been rejected."
           end
-          logger.info { "              * Votes: #{rounds[round].first.last}" }
-          
-          tied = true
-          pref = 1
-          while tied
-            votes_for_pref = vote_preferences.map { |v| v[pref] }.group_by { |n| n }.map { |c,v| {c => v.count} }.reduce({}, :merge)
-            max_votes_for_pref = votes_for_pref.max_by { |k,v| v }.last
-            logger.info { "→ #{time_since(start_time)}:   * Highest #{pref}#{pref.ordinal} preference votes: #{max_votes_for_pref}" }
-
-            if votes_for_pref.select { |k,v| v == max_votes_for_pref }.count == 1
-              winner = candidates.select { |c| c[:id] == votes_for_pref.select { |k,v| v == max_votes_for_pref }.first.first }.first
-              logger.info do
-                "→ #{time_since(start_time)}:   * Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}) has won the tie by #{pref}#{pref.ordinal} preference votes and has been elected."
-              end
-              break
-            else
-              pref += 1
-            end
-          end
-
-          unless winner.present?
-            # True tie; decide winner randomly from tied candidates
-            winner = tie[Random.rand(0..tie.count-1)]
-            logger.info do
-              "→ #{time_since(start_time)}:   * Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}) has been randomly selected and has been elected."
-            end
-          end
-        end
-      else
-        # No tie detected
-        viable_candidates = (viable_candidates - [lowest.first])
-        logger.info do
-          candidate = candidates.select { |c| c[:id] == lowest.first }.first
-          "→ #{time_since(start_time)}:   Candidate \##{candidate[:id]} (#{candidate[:name]}, #{candidate[:party]}, #{lowest.last} votes) has been rejected."
         end
       end
 
@@ -225,7 +228,7 @@ class Vote < ApplicationRecord
             candidates.select { |c| c[:id] == candidate }.first
           end
           logger.info do
-            "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes) has been elected."
+            "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes, #{100*(rounds[round].values.max.to_f/round_total).round(2)}\%) has been elected."
           end
           break
         end
@@ -267,5 +270,10 @@ class Vote < ApplicationRecord
     yield
   ensure
     ActiveRecord::Base.logger = old_logger
+  end
+
+  def self.winner?(round_data)
+    round_total = round_data.values.sum
+    round_data.map { |_, v| v.to_f > ((round_total.to_f / 2) + 1) }.any?
   end
 end
