@@ -41,9 +41,12 @@ class Vote < ApplicationRecord
       votes << vote_hash
     end
 
-    Vote.bulk_insert do |w|
-      votes.each do |v|
-        w.add(preferences_hash: Vote.format_preferences(v))
+    logger.info { "→ #{time_since(start_time)}: Storing ballots in database..." }
+    Vote.disable_logs_while do
+      Vote.bulk_insert do |w|
+        votes.each do |v|
+          w.add(preferences_hash: Vote.format_preferences(v))
+        end
       end
     end
   ensure
@@ -238,5 +241,13 @@ class Vote < ApplicationRecord
   private
   def self.time_since(start_time)
     Time.at(Time.now - start_time).utc.strftime("%H:%M:%S")
+  end
+
+  def self.disable_logs_while(&block)
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+    yield
+  ensure
+    ActiveRecord::Base.logger = old_logger
   end
 end
