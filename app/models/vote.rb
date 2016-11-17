@@ -75,6 +75,14 @@ class Vote < ApplicationRecord
   end
 
   def self.rank(election: Election.last, batches: true, test: false, batch_size: 100000)
+    bash_red     = "\e[91m"
+    bash_yellow  = "\e[93m"
+    bash_green   = "\e[92m"
+    bash_white   = "\e[39m"
+    bash_bold    = "\e[1m"
+    bash_uline   = "\e[4m"
+    bash_reset   = "\e[0m"
+
     start_time = Time.now
     logger.info { "→ #{time_since(start_time)}: Initializing..." }
     logger.info { "→ #{time_since(start_time)}:   Loading light data..." }
@@ -131,14 +139,14 @@ class Vote < ApplicationRecord
 
     logger.info { "→ #{time_since(start_time)}: Initialization complete. Calculating preferences..." }
     while winner.nil?
-      logger.info { "→ #{time_since(start_time)}: Beginning round \##{round}..." }
+      logger.info { "→ #{time_since(start_time)}: #{bash_bold}#{bash_uline}Round \##{round}#{bash_reset}" }
       rounds[round] = {}
 
       # Initialize empty counts for remaining viable candidates
       viable_candidates.each do |viable|
         rounds[round][viable] = 0
       end
-      logger.info { "→ #{time_since(start_time)}:   Viable candidates for round \##{round}: #{viable_candidates.count}" }
+      logger.info { "→ #{time_since(start_time)}:   Viable candidates for round \##{round}: #{bash_bold}#{viable_candidates.count}#{bash_reset}" }
 
       # Increment count for the candidate that has the highest-ranked viable preference of each vote
       vote_preferences.each do |vote|
@@ -152,7 +160,7 @@ class Vote < ApplicationRecord
 
       # Count the total number of votes for viable candidates in this round
       round_total = rounds[round].values.sum
-      logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{round_total} (#{(100*round_total.to_f / total_votes).round(2)} %)" }
+      logger.info { "→ #{time_since(start_time)}:   Total votes for round \##{round}: #{bash_bold}#{round_total}#{bash_reset} (#{(100*round_total.to_f / total_votes).round(2)}\% of all votes)" }
 
       # Skip if there is a winner
       unless Vote.winner? rounds[round]
@@ -169,14 +177,14 @@ class Vote < ApplicationRecord
               viable_candidates = (viable_candidates - [id])
               logger.info do
                 candidate = candidates.select { |c| c[:id] == id }.first
-                "→ #{time_since(start_time)}:   Candidate \##{candidate[:id]} (#{candidate[:name]}, #{candidate[:party]}, #{votes} votes) has been rejected."
+                "→ #{time_since(start_time)}:   #{bash_bold}#{bash_red}Rejected#{bash_reset}: #{bash_bold}#{candidate[:name]}#{bash_reset} (\##{candidate[:id]}, #{candidate[:party]}, #{votes} votes)"
               end
             end
           else
             # Tie involves leader; winner is determined by highest number of first preference votes; else second; else third; etc. 
             # In case of true tie, winner is determined randomly
             tie     = rounds[round].keys
-            logger.info { "→ #{time_since(start_time)}:   * Leading tie detected..." }
+            logger.info { "→ #{time_since(start_time)}:   * #{bash_bold}#{bash_yellow}Leading tie detected#{bash_reset}" }
             logger.info do
               tie_str = tie.map { |id| candidates.select { |c| c[:id] == id }.first }.map { |c| "\##{c[:id]}: #{c[:name]} (#{c[:party]})" }.join(", ")
               "              * Tied candidates: #{tie_str}"
@@ -193,7 +201,7 @@ class Vote < ApplicationRecord
               if votes_for_pref.select { |k,v| v == max_votes_for_pref }.count == 1
                 winner = candidates.select { |c| c[:id] == votes_for_pref.select { |k,v| v == max_votes_for_pref }.first.first }.first
                 logger.info do
-                  "→ #{time_since(start_time)}:   * Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}) has won the tie by #{pref}#{pref.ordinal} preference votes and has been elected."
+                  "→ #{time_since(start_time)}:   * #{bash_bold}#{bash_green}Elected#{bash_white}: #{bash_bold}#{winner[:name]}#{bash_reset} (\##{winner[:id]}, #{winner[:party]}) has won the tie by #{pref}#{pref.ordinal} preference votes.#{bash_reset}"
                 end
                 break
               else
@@ -205,7 +213,7 @@ class Vote < ApplicationRecord
               # True tie; decide winner randomly from tied candidates
               winner = tie[Random.rand(0..tie.count-1)]
               logger.info do
-                "→ #{time_since(start_time)}:   * Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}) has been randomly selected and has been elected."
+                "→ #{time_since(start_time)}:   * #{bash_bold}#{bash_green}Elected#{bash_white}: #{bash_bold}#{winner[:name]}#{bash_reset} (\##{winner[:id]}, #{winner[:party]}) has been randomly selected.#{bash_reset}"
               end
             end
           end
@@ -214,7 +222,7 @@ class Vote < ApplicationRecord
           viable_candidates = (viable_candidates - [lowest.first])
           logger.info do
             candidate = candidates.select { |c| c[:id] == lowest.first }.first
-            "→ #{time_since(start_time)}:   Candidate \##{candidate[:id]} (#{candidate[:name]}, #{candidate[:party]}, #{lowest.last} votes) has been rejected."
+            "→ #{time_since(start_time)}:   #{bash_bold}#{bash_red}Rejected#{bash_reset}: #{bash_bold}#{candidate[:name]}#{bash_reset} (\##{candidate[:id]}, #{candidate[:party]}, #{lowest.last} votes)"
           end
         end
       end
@@ -228,9 +236,26 @@ class Vote < ApplicationRecord
             candidates.select { |c| c[:id] == candidate }.first
           end
           logger.info do
-            "→ #{time_since(start_time)}:   Candidate \##{winner[:id]} (#{winner[:name]}, #{winner[:party]}, #{rounds[round].values.max} votes, #{100*(rounds[round].values.max.to_f/round_total).round(2)}\%) has been elected."
+            first_round = (100*rounds[1][winner[:id]].to_f/rounds[1].values.sum).round(2)
+            final_round = (100*rounds[round].values.max.to_f/round_total).round(2)
+
+            percents_note = if round > 1
+              "#{final_round}\% of round #{round} votes and #{first_round}\% of first preference votes"
+            else
+              "#{first_round}\% of first preference votes"
+            end
+
+            "→ #{time_since(start_time)}:   #{bash_bold}#{bash_green}Elected#{bash_white}: #{bash_bold}#{winner[:name]}#{bash_reset} (\##{winner[:id]}, #{winner[:party]}, #{rounds[round].values.max} votes, #{percents_note})#{bash_reset}"
           end
           break
+        end
+      end
+
+      unless winner.present?
+        logger.info do
+          leader = candidates.select { |c| c[:id] == rounds[round].max_by { |_,v| v }.first }.first
+          current_votes = (100*rounds[round].values.max.to_f/round_total).round(2)
+          "→ #{time_since(start_time)}:   #{bash_bold}#{bash_yellow}Leading#{bash_reset}: #{bash_bold}#{leader[:name]}#{bash_reset} (\##{leader[:id]}, #{leader[:party]}), with #{current_votes}\% of round #{round} votes."
         end
       end
 
