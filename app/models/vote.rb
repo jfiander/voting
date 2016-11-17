@@ -21,7 +21,7 @@ class Vote < ApplicationRecord
     start_time       = Time.now
     logger.info { "→ #{time_since(start_time)}: Initializing..." }
 
-    initial_count    = Vote.count
+    initial_count    = Vote.where(election: election).count
     candidates_count = Candidate.count
     valid_candidates = Candidate.all.map(&:id)
 
@@ -54,7 +54,7 @@ class Vote < ApplicationRecord
 
     election
   ensure
-    logger.info { "→ Generated #{Vote.count - initial_count} new ballots#{bias_description}" }
+    logger.info { "→ Generated #{Vote.where(election: election).count - initial_count} new ballots#{bias_description}" }
     logger.info { "→ Took #{time_since(start_time)}" }
   end
 
