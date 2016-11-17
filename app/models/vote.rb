@@ -1,4 +1,6 @@
 class Vote < ApplicationRecord
+  belongs_to :election
+
   validates :preferences_hash, presence: true
 
   def preferences
@@ -50,11 +52,20 @@ class Vote < ApplicationRecord
       end
     end
   ensure
-    logger.info { "→ Generated #{Vote.count - initial_count} new votes#{bias_description}" }
+    logger.info { "→ Generated #{Vote.count - initial_count} new ballots#{bias_description}" }
     logger.info { "→ Took #{time_since(start_time)}" }
   end
 
-  def self.rank(batches: true, test: false)
+  def self.multi_random_gen(iter = 10, cap: 100000, bias: [])
+    start_time = Time.now
+    iter.times do |i|
+      logger.info { "→ #{time_since(start_time)}: Beginning random_gen cycle \##{i}..." }
+      Vote.random_gen(cap, bias: bias)
+    end
+    logger.info { "→ Took #{time_since(start_time)}" }
+  end
+
+  def self.rank(batches: true, test: false, batch_size: 100000)
     start_time = Time.now
     logger.info { "→ #{time_since(start_time)}: Initializing..." }
     logger.info { "→ #{time_since(start_time)}:   Loading light data..." }
@@ -67,19 +78,20 @@ class Vote < ApplicationRecord
     rounds            = {}
     batches           = false if test
 
-    in_batches = batches ? " in batches" : ""
+    in_batches  = batches ? " in batches" : ""
     logger.info { "→ #{time_since(start_time)}:   Loading and mapping votes#{in_batches}..." }
     if batches
-      batch_size  = 100000
       total_votes = Vote.count
-      logger.info { "→ #{time_since(start_time)}:   Total votes: #{total_votes}" }
+      num_batches = (total_votes.to_f / batch_size).ceil
+      logger.info { "→ #{time_since(start_time)}:   Total votes: #{total_votes} (#{num_batches} batches)" }
       vote_preferences = {}
       Vote.find_in_batches(batch_size: batch_size).map.with_index do |group, index|
         vote_preferences[index] = group.map do |vote|
           vote.preferences
         end
 
-        logger.info { "→ #{time_since(start_time)}:     Mapped #{index+1} #{'batch'.pluralize(index+1)} of #{batch_size} votes..." }
+        batch_size = total_votes % batch_size if (total_votes.to_f / batch_size).ceil == index+1
+        logger.info { "→ #{time_since(start_time)}:     Mapped batch #{index+1} of #{num_batches} (#{batch_size} votes)..." }
       end
 
       vote_preferences = vote_preferences.values.flatten
