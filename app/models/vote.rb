@@ -55,7 +55,7 @@ class Vote < ApplicationRecord
     logger.info { "→ Generated #{Vote.count - initial_count} new ballots#{bias_description}" }
     logger.info { "→ Took #{time_since(start_time)}" }
 
-    return election
+    election
   end
 
   def self.multi_random_gen(iter = 10, cap: 100000, election: Election.last, bias: [])
@@ -66,7 +66,12 @@ class Vote < ApplicationRecord
     end
     logger.info { "→ Took #{time_since(start_time)}" }
 
-    return election
+    election
+  end
+
+  def self.new_test_election(iter = 100000)
+    election = Election.create(description: "Test Election #{SecureRandom.hex(12)}", date: Time.now + 2.months)
+    Vote.random_gen iter, election: election
   end
 
   def self.rank(election: Election.last, batches: true, test: false, batch_size: 100000)
