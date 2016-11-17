@@ -51,11 +51,11 @@ class Vote < ApplicationRecord
         end
       end
     end
+
+    election
   ensure
     logger.info { "→ Generated #{Vote.count - initial_count} new ballots#{bias_description}" }
     logger.info { "→ Took #{time_since(start_time)}" }
-
-    election
   end
 
   def self.multi_random_gen(iter = 10, cap: 100000, election: Election.last, bias: [])
