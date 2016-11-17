@@ -15,7 +15,7 @@ class Vote < ApplicationRecord
     "{#{hash.map { |preference, candidate| "\"#{preference}\"=>\"#{candidate}\""}.join(",")}}"
   end
 
-  def self.random_gen(iter = 10, bias: [])
+  def self.random_gen(iter = 10, election: Election.last, bias: [])
     raise "Error: Cannot generate more than 1,000,000 ballots at a time." if iter > 1000000
     # Generate some random votes
     start_time       = Time.now
@@ -29,7 +29,7 @@ class Vote < ApplicationRecord
 
     bias_description = bias.present? ? " biased with candidate #{bias[1]} at preference #{bias[0]}" : ""
 
-    logger.info { "→ #{time_since(start_time)}: Generating #{iter} random ballots#{bias_description}..." }
+    logger.info { "→ #{time_since(start_time)}: Generating #{iter} random ballots#{bias_description} for #{election.description}..." }
     iter.times do |i|
       candidate_ids = valid_candidates
       preferences = Random.rand(1..candidate_ids.count)
@@ -45,9 +45,9 @@ class Vote < ApplicationRecord
 
     logger.info { "→ #{time_since(start_time)}: Storing ballots in database..." }
     Vote.disable_logs_while do
-      Vote.bulk_insert do |w|
+      Vote.bulk_insert(:preferences_hash, :election_id, :created_at, :updated_at) do |w|
         votes.each do |v|
-          w.add(preferences_hash: Vote.format_preferences(v))
+          w.add [Vote.format_preferences(v), election.id]
         end
       end
     end
@@ -56,7 +56,7 @@ class Vote < ApplicationRecord
     logger.info { "→ Took #{time_since(start_time)}" }
   end
 
-  def self.multi_random_gen(iter = 10, cap: 100000, bias: [])
+  def self.multi_random_gen(iter = 10, cap: 100000, election: Election.last, bias: [])
     start_time = Time.now
     iter.times do |i|
       logger.info { "→ #{time_since(start_time)}: Beginning random_gen cycle \##{i}..." }
@@ -65,7 +65,7 @@ class Vote < ApplicationRecord
     logger.info { "→ Took #{time_since(start_time)}" }
   end
 
-  def self.rank(batches: true, test: false, batch_size: 100000)
+  def self.rank(election: Election.last, batches: true, test: false, batch_size: 100000)
     start_time = Time.now
     logger.info { "→ #{time_since(start_time)}: Initializing..." }
     logger.info { "→ #{time_since(start_time)}:   Loading light data..." }
@@ -79,13 +79,13 @@ class Vote < ApplicationRecord
     batches           = false if test
 
     in_batches  = batches ? " in batches" : ""
-    logger.info { "→ #{time_since(start_time)}:   Loading and mapping votes#{in_batches}..." }
+    logger.info { "→ #{time_since(start_time)}:   Loading and mapping votes#{in_batches} for #{election.description}..." }
     if batches
-      total_votes = Vote.count
+      total_votes = Vote.where(election: election).count
       num_batches = (total_votes.to_f / batch_size).ceil
       logger.info { "→ #{time_since(start_time)}:   Total votes: #{total_votes} (#{num_batches} batches)" }
       vote_preferences = {}
-      Vote.find_in_batches(batch_size: batch_size).map.with_index do |group, index|
+      Vote.where(election: election).find_in_batches(batch_size: batch_size).map.with_index do |group, index|
         vote_preferences[index] = group.map do |vote|
           vote.preferences
         end
@@ -99,19 +99,19 @@ class Vote < ApplicationRecord
        votes = if test
         if test.is_a? Integer
           logger.info { "→ #{time_since(start_time)}:     Selecting first #{test} votes..." }
-          Vote.limit(test)
+          Vote.where(election: election).limit(test)
         elsif test.is_a? Array
           bottom = test[0]-1 > 0 ? test[0]-1 : 0
           top    = test[1] > bottom ? test[1] : 10000
           logger.info { "→ #{time_since(start_time)}:     Selecting votes #{bottom+1} thru #{top}..." }
-          Vote.offset(bottom).limit(top-bottom-1)
+          Vote.where(election: election).offset(bottom).limit(top-bottom-1)
         else
           logger.info { "→ #{time_since(start_time)}:     Selecting first 10000 votes..." }
-          Vote.limit(10000)
+          Vote.where(election: election).limit(10000)
         end
       else
         logger.info { "→ #{time_since(start_time)}:     Selecting all votes in one batch..." }
-        Vote.all
+        Vote.where(election: election).all
       end
 
       logger.info { "→ #{time_since(start_time)}:     Mapping all votes to preferences..." }
