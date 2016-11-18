@@ -1,68 +1,69 @@
 module TermStyle
+  # Global
   def self.reset
-    "\e[0m"
+    self.style { 0 }
   end
 
   # Styles
   def self.bold
-    "\e[1m"
+    self.style { 1 }
   end
 
   def self.dim
-    "\e[2m"
+    self.style { 2 }
   end
 
   def self.underline
-    "\e[4m"
+    self.style { 4 }
   end
 
   def self.blink
-    "\e[5m"
+    self.style { 5 }
   end
 
   def self.invert
-    "\e[7m"
+    self.style { 7 }
   end
 
   def self.hidden
-    "\e[8m"
+    self.style { 8 }
   end
 
   # Colors
   def self.default
-    "\e[39m"
+    self.color { 9 }
   end
 
   def self.black
-    "\e[30m"
+    self.color { 0 }
   end
 
   def self.red
-    "\e[31m"
+    self.color { 1 }
   end
 
   def self.green
-    "\e[32m"
+    self.color { 2 }
   end
 
   def self.yellow
-    "\e[33m"
+    self.color { 3 }
   end
 
   def self.blue
-    "\e[34m"
+    self.color { 4 }
   end
 
   def self.magenta
-    "\e[35m"
+    self.color { 5 }
   end
 
   def self.cyan
-    "\e[36m"
+    self.color { 6 }
   end
 
   def self.gray
-    "\e[37m"
+    self.color { 7 }
   end
 
   # Helpers
@@ -129,6 +130,19 @@ module TermStyle
     puts "Green".style(:green) + "bold white".bold.red(:append) + "red underlined".bold.cancel.underline + "blue".blue.invert.reset(:append)
 
     self.available
+  end
+
+  private
+  def self.escape(body, prefix = nil)
+    "\e[#{prefix}#{body}m"
+  end
+
+  def self.style(&block)
+    self.escape(yield)
+  end
+
+  def self.color(&block)
+    self.escape(yield, 3)
   end
 end
 
