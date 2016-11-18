@@ -149,7 +149,7 @@ class Vote < ApplicationRecord
 
     logger.info { "→ #{time_since(start_time)}: Initialization complete. Calculating preferences..." }
     while winner.nil?
-      logger.info { "→ #{time_since(start_time)}: #{TermStyle.bold}#{TermStyle.underline}Round \##{round}#{TermStyle.reset}" }
+      logger.info { "→ #{time_since(start_time)}: #{TermStyle.bold.underline}Round \##{round}#{TermStyle.reset}" }
       rounds[round] = {}
 
       # Initialize empty counts for remaining viable candidates
@@ -187,7 +187,7 @@ class Vote < ApplicationRecord
               viable_candidates = (viable_candidates - [id])
               logger.info do
                 candidate = candidates.select { |c| c[:id] == id }.first
-                "→ #{time_since(start_time)}:   #{TermStyle.bold}#{TermStyle.red.bright}Rejected#{TermStyle.reset}: #{TermStyle.bold}#{candidate[:name]}#{TermStyle.reset} (\##{candidate[:id]}, #{candidate[:party]}, #{votes} votes)"
+                "→ #{time_since(start_time)}:   #{TermStyle.red.bright}Rejected#{TermStyle.reset}: #{TermStyle.bold}#{candidate[:name]}#{TermStyle.reset} (\##{candidate[:id]}, #{candidate[:party]}, #{votes} votes)"
               end
             end
           else
