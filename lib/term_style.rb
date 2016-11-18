@@ -164,5 +164,13 @@ class String
       "#{self}#{TermStyle.send(style)}"
     end
   end
+
+  def style(*styles)
+    str = self
+    styles.each do |s|
+      str = "#{TermStyle.send(s)}#{str}#{TermStyle.reset}"
+    end
+    str
+  end
 end
 
