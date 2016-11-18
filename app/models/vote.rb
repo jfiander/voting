@@ -15,7 +15,7 @@ class Vote < ApplicationRecord
     "{#{hash.map { |preference, candidate| "\"#{preference}\"=>\"#{candidate}\""}.join(",")}}"
   end
 
-  def self.random_gen(iter = 10, election: Election.last, bias: [])
+  def self.random_gen(iter = 10, election: Election.last, bias: nil)
     if iter > 1000000
       iter = 1000000
       logger.warn { "Warning: A maximum of 1,000,000 ballots can be generated at a time." }
@@ -32,6 +32,16 @@ class Vote < ApplicationRecord
     valid_candidates = Candidate.all.map(&:id)
 
     votes = []
+
+    if bias.present?
+      if bias.is_a? Hash
+        bias = [bias[:preference], bias[:candidate]]
+      elsif bias.is_a? Array
+        # Do nothing
+      else
+        bias = nil
+      end
+    end
 
     bias_description = bias.present? ? " biased with candidate #{bias[1]} at preference #{bias[0]}" : ""
 
