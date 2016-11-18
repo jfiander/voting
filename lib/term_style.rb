@@ -141,7 +141,7 @@ class String
   def cancel
     # Cancel valid style sequences
     if self.match /\e\[[1,2,4,5,7,8]m/
-      self.gsub("[", "[2")
+      self.gsub(/\[[1,2,4,5,7,8]/, "[2")
     else
       puts "Not a valid terminal style sequence."
       self
