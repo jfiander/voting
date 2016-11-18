@@ -124,6 +124,10 @@ module TermStyle
       print "\n"
     end
 
+    puts "\n\nEXAMPLE:"
+    puts "puts \"Green\".style(:green) + \"bold white\".bold.red(:append) + \"red underlined\".bold.cancel.underline + \"blue invert\".blue.invert.reset(:append)"
+    puts "Green".style(:green) + "bold white".bold.red(:append) + "red underlined".bold.cancel.underline + "blue".blue.invert.reset(:append)
+
     self.available
   end
 end
