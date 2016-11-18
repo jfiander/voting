@@ -71,6 +71,7 @@ module TermStyle
         control:   :reset,
       modifiers: [
                    :bright,
+                   :regular,
                    :cancel
                  ],
          colors: [
@@ -133,7 +134,17 @@ class String
     if self.match /\e\[3\dm/
       self.gsub("[3", "[9")
     else
-      puts "Not a valid terminal color sequence."
+      puts "Not a valid regular terminal color sequence."
+      self
+    end
+  end
+
+  def regular
+    # Convert valid color sequences to bright version
+    if self.match /\e\[9\dm/
+      self.gsub("[9", "[3")
+    else
+      puts "Not a valid bright terminal color sequence."
       self
     end
   end
