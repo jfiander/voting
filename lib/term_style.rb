@@ -64,10 +64,66 @@ module TermStyle
   def self.gray
     "\e[37m"
   end
+
+  # Helpers
+  def self.available
+    {
+        control:   :reset,
+      modifiers: [
+                   :bright,
+                   :cancel
+                 ],
+         colors: [
+                   :default,
+                   :black,
+                   :red,
+                   :green,
+                   :yellow,
+                   :blue,
+                   :magenta,
+                   :cyan,
+                   :gray
+                 ],
+         styles: [
+                   :bold,
+                   :dim,
+                   :underline,
+                   :blink,
+                   :invert,
+                   :hidden
+                 ]
+    }
+  end
+
+  def self.demo
+    puts "COLORS:"
+    self.available[:colors].each do |color|
+      padding = " " * 3
+      print "#{self.send(color)}#{color}#{self.reset} #{padding}"
+    end
+
+    puts "\n\nSTYLES:"
+    self.available[:styles].each do |style|
+      padding = " " * (self.available[:colors].map(&:length).max + 1)
+      print "#{self.send(style)}#{style}#{self.reset} #{padding}"
+    end
+
+    puts "\n\nCOMBINATIONS:"
+    self.available[:colors].each do |color|
+      padding = " " * (self.available[:colors].map(&:length).max - color.length)
+      self.available[:styles].each do |style|
+        print "#{self.send(color)}#{self.send(style)}#{style} #{color}#{self.reset} #{padding}"
+      end
+      print "\n"
+    end
+
+    self.available
+  end
 end
 
 class String
   def bright
+    # Convert valid color sequences to bright version
     if self.match /\e\[3\dm/
       self.gsub("[3", "[9")
     else
@@ -77,6 +133,7 @@ class String
   end
 
   def cancel
+    # Cancel valid style sequences
     if self.match /\e\[[1,2,4,5,7,8]m/
       self.gsub("[", "[2")
     else
