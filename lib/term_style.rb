@@ -158,5 +158,11 @@ class String
       self
     end
   end
+
+  TermStyle.available(:flat).each do |style|
+    define_method style do
+      "#{self}#{TermStyle.send(style)}"
+    end
+  end
 end
 
