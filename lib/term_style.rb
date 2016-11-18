@@ -168,7 +168,11 @@ class String
   def style(*styles)
     str = self
     styles.each do |s|
-      str = "#{TermStyle.send(s)}#{str}#{TermStyle.reset}"
+      str = if TermStyle.available[:modifiers].include? s
+        str.send(s)
+      else
+        "#{TermStyle.send(s)}#{str}#{TermStyle.reset}"
+      end
     end
     str
   end
