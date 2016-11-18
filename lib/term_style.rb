@@ -66,8 +66,8 @@ module TermStyle
   end
 
   # Helpers
-  def self.available
-    {
+  def self.available(mode = nil)
+    available_methods = {
         control:   :reset,
       modifiers: [
                    :bright,
@@ -93,6 +93,12 @@ module TermStyle
                    :hidden
                  ]
     }
+
+    if mode == :flat
+      [available_methods[:control], available_methods[:colors], available_methods[:styles]].flatten
+    else
+      available_methods
+    end
   end
 
   def self.demo
