@@ -160,8 +160,12 @@ class String
   end
 
   TermStyle.available(:flat).each do |style|
-    define_method style do
-      "#{self}#{TermStyle.send(style)}"
+    define_method style do |pos = :prepend|
+      if pos == :append
+        "#{self}#{TermStyle.send(style)}"
+      else
+        "#{TermStyle.send(style)}#{self}"
+      end
     end
   end
 
