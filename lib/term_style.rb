@@ -1,69 +1,33 @@
 module TermStyle
-  # Global
-  def self.reset
-    self.style { 0 }
-  end
+  @term_style_config = {
+    style: {
+           reset: 0,
+            bold: 1,
+             dim: 2,
+       underline: 4,
+           blink: 5,
+          invert: 7,
+          hidden: 8
+    },
+    color: {
+      default: 9,
+        black: 0,
+          red: 1,
+        green: 2,
+       yellow: 3,
+         blue: 4,
+      magenta: 5,
+         cyan: 6,
+         gray: 7
+    }
+  }
 
-  # Styles
-  def self.bold
-    self.style { 1 }
-  end
-
-  def self.dim
-    self.style { 2 }
-  end
-
-  def self.underline
-    self.style { 4 }
-  end
-
-  def self.blink
-    self.style { 5 }
-  end
-
-  def self.invert
-    self.style { 7 }
-  end
-
-  def self.hidden
-    self.style { 8 }
-  end
-
-  # Colors
-  def self.default
-    self.color { 9 }
-  end
-
-  def self.black
-    self.color { 0 }
-  end
-
-  def self.red
-    self.color { 1 }
-  end
-
-  def self.green
-    self.color { 2 }
-  end
-
-  def self.yellow
-    self.color { 3 }
-  end
-
-  def self.blue
-    self.color { 4 }
-  end
-
-  def self.magenta
-    self.color { 5 }
-  end
-
-  def self.cyan
-    self.color { 6 }
-  end
-
-  def self.gray
-    self.color { 7 }
+  @term_style_config.each do |type, tag_info|
+    tag_info.each do |tag_name, tag_num|
+      define_method tag_name do
+        self.send(type) { tag_num }
+      end
+    end
   end
 
   # Helpers
@@ -75,25 +39,8 @@ module TermStyle
                    :regular,
                    :cancel
                  ],
-         colors: [
-                   :default,
-                   :black,
-                   :red,
-                   :green,
-                   :yellow,
-                   :blue,
-                   :magenta,
-                   :cyan,
-                   :gray
-                 ],
-         styles: [
-                   :bold,
-                   :dim,
-                   :underline,
-                   :blink,
-                   :invert,
-                   :hidden
-                 ]
+         colors: @term_style_config[:color].keys,
+         styles: @term_style_config[:style].keys.reject { |s| s == :reset }
     }
 
     if mode == :flat
