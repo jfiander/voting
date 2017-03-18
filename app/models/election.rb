@@ -312,7 +312,7 @@ class Election < ApplicationRecord
   def multi_random_gen(iter = 10, cap: 100000, bias: [], weights: {}, weight_type: nil)
     start_time = Time.now
     iter.times do |i|
-      logger.info { "→ #{Election.time_since(start_time)}: Beginning random_gen cycle \##{i}..." }
+      logger.info { "→ #{Election.time_since(start_time)}: Beginning random_gen cycle \##{i+1}..." }
       self.random_gen(cap, bias: bias, weights: weights, weight_type: weight_type)
     end
     logger.info { "→ Took #{Election.time_since(start_time)}" }
