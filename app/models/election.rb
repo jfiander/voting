@@ -135,8 +135,10 @@ class Election < ApplicationRecord
 
               if votes_for_pref.select { |k,v| v == max_votes_for_pref }.count == 1
                 winner = candidates.select { |c| c[:id] == votes_for_pref.select { |k,v| v == max_votes_for_pref }.first.first }.first
-                logger.info do
-                  "→ #{Election.time_since(start_time)}:   * #{TermStyle.green.bright}Elected#{TermStyle.reset}: #{TermStyle.bold}#{winner[:name]}#{TermStyle.reset} (\##{winner[:id]}, #{winner[:party]}) has won the tie by #{pref}#{pref.ordinal} preference votes."
+                if winner.present?
+                  logger.info do
+                    "→ #{Election.time_since(start_time)}:   * #{TermStyle.green.bright}Elected#{TermStyle.reset}: #{TermStyle.bold}#{winner[:name]}#{TermStyle.reset} (\##{winner[:id]}, #{winner[:party]}) has won the tie by #{pref}#{pref.ordinal} preference votes."
+                  end
                 end
                 break
               else
@@ -146,10 +148,13 @@ class Election < ApplicationRecord
 
             unless winner.present?
               # True tie; decide winner randomly from tied candidates
-              winner = tie[Random.rand(0..tie.count-1)]
-              logger.info do
-                "→ #{Election.time_since(start_time)}:   * #{TermStyle.green.bright}Elected#{TermStyle.reset}: #{TermStyle.bold}#{winner[:name]}#{TermStyle.reset} (\##{winner[:id]}, #{winner[:party]}) has been randomly selected."
+              winner = candidates.select { |c| c[:id] == tie[Random.rand(0..tie.count-1)] }.first
+              if winner.present?
+                logger.info do
+                  "→ #{Election.time_since(start_time)}:   * #{TermStyle.green.bright}Elected#{TermStyle.reset}: #{TermStyle.bold}#{winner[:name]}#{TermStyle.reset} (\##{winner[:id]}, #{winner[:party]}) has been randomly selected."
+                end
               end
+              break
             end
           end
         else
