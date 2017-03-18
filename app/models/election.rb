@@ -331,7 +331,7 @@ class Election < ApplicationRecord
         ])
         election = Election.create
         if weighted
-          election.random_gen(25000, weights: candidates.map { |c| {c.id => Random.rand(candidates.count)+1} }.reduce({}, :merge))
+          election.random_gen(25000, weights: candidates.map { |c| {c.id => 2*Random.rand(candidates.count)+1} }.reduce({}, :merge))
         else
           election.random_gen(25000)
         end
