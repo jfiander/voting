@@ -14,12 +14,14 @@ class Election < ApplicationRecord
     end
   end
 
-  def rank(batches: true, test: false, batch_size: 100000)
+  def rank(batches: true, test: false, batch_size: 100000, participants: [])
     start_time = Time.now
     logger.info { "→ #{Election.time_since(start_time)}: Initializing..." }
     logger.info { "→ #{Election.time_since(start_time)}:   Loading light data..." }
 
-    candidates        = Candidate.joins(:party).select("candidates.id, candidates.name, parties.name AS party").all.map(&:attributes).map(&:symbolize_keys!)
+    candidates        = Candidate.joins(:party).select("candidates.id, candidates.name, parties.name AS party")
+    candidates        = participants.present? ? candidates.where(id: participants) : all
+    candidates        = candidates.map(&:attributes).map(&:symbolize_keys!)
     viable_candidates = candidates.pluck(:id)
     candidate_count   = viable_candidates.count
     winner            = nil
@@ -309,6 +311,31 @@ class Election < ApplicationRecord
     logger.info { "→ Took #{Election.time_since(start_time)}" }
 
     self
+  end
+  
+  def self.demo(save: false)
+    begin
+      Election.transaction do
+        parties = Party.create([
+          {name: "Party A"},
+          {name: "Party B"},
+          {name: "Party C"}
+        ])
+        candidates = Candidate.create([
+          {name: "Candidate 1", party: Party.find_by(name: "Party A")},
+          {name: "Candidate 2", party: Party.find_by(name: "Party A")},
+          {name: "Candidate 3", party: Party.find_by(name: "Party B")},
+          {name: "Candidate 4", party: Party.find_by(name: "Party C")},
+          {name: "Candidate 5", party: Party.find_by(name: "Party C")},
+        ])
+        @demo_results = Election.create.random_gen(25000).rank(participants: candidates.map(&:id))
+        raise unless save
+      end
+    rescue
+      # Do nothing
+    end
+    puts "Demo complete!"
+    @demo_results
   end
 
 
