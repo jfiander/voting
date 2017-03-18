@@ -1,6 +1,4 @@
 class Vote < ApplicationRecord
-  include TermStyle
-
   belongs_to :election
 
   validates :preferences_hash, presence: true
