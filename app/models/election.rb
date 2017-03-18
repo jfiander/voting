@@ -129,6 +129,7 @@ class Election < ApplicationRecord
             pref = 1
             while tied
               votes_for_pref = vote_preferences.map { |v| v[pref] }.group_by { |n| n }.map { |c,v| {c => v.count} }.reduce({}, :merge)
+              votes_for_pref = {0=>0} if votes_for_pref.keys.reject { |k| k.nil?}.empty?
               max_votes_for_pref = votes_for_pref.max_by { |k,v| v }.last
               logger.info { "→ #{Election.time_since(start_time)}:   * Highest #{pref}#{pref.ordinal} preference votes: #{max_votes_for_pref}" }
 
