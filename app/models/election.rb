@@ -237,6 +237,7 @@ class Election < ApplicationRecord
     votes = []
 
     bias_description = ""
+    weights_for_desc = weights.reject { |_, c| c.nil? || c == 0 }
     if weights.present? && weight_type == :inclusion
       cumulative_weights = {}
       weights_total = 0
@@ -244,12 +245,12 @@ class Election < ApplicationRecord
         weights_total += w
         cumulative_weights[c] = weights_total
       end
+      bias_description = ", weighted as #{weights_for_desc}"
     elsif weights.present? && weight_type == :exclusion
       weights_total = weights.values.sum
       Candidate.all.each do |c|
         weights[c.id] = 0 unless weights.has_key?(c.id)
       end
-      weights_for_desc = weights.reject { |_, c| c.nil? || c == 0 }
       bias_description = ", weighted as #{weights_for_desc}"
     elsif bias.present?
       bias_description = ", biased with candidate #{bias[1]} at preference #{bias[0]}"
