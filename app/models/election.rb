@@ -1,7 +1,9 @@
 class Election < ApplicationRecord
   has_many :votes
 
-  before_create do
+  validates :description, uniqueness: true
+
+  before_save do
     self.description = "Test Election #{SecureRandom.hex(12)}" if self.description.blank?
     self.date = Time.now + 2.months if self.date.blank?
   end
@@ -214,7 +216,7 @@ class Election < ApplicationRecord
     }
   end
 
-  def random_gen(iter = 10, bias: nil)
+  def random_gen(iter = 10, bias: nil, weights: [], weight_type: :inclusion)
     if iter > 1000000
       iter = 1000000
       logger.warn { "Warning: A maximum of 1,000,000 ballots can be generated at a time." }
@@ -232,25 +234,49 @@ class Election < ApplicationRecord
 
     votes = []
 
-    if bias.present?
-      if bias.is_a? Hash
-        bias = [bias[:preference], bias[:candidate]]
-      elsif bias.is_a? Array
-        # Do nothing
-      else
-        bias = nil
+    bias_description = ""
+    if weights.present? && weight_type == :inclusion
+      cumulative_weights = {}
+      weights_total = 0
+      weights.each do |c, w|
+        weights_total += w
+        cumulative_weights[c] = weights_total
       end
+    elsif weights.present? && weight_type == :exclusion
+      weights_total = weights.values.sum
+      Candidate.all.each do |c|
+        weights[c.id] = 0 unless weights.has_key?(c.id)
+      end
+      weights_for_desc = weights.reject { |_, c| c.nil? || c == 0 }
+      bias_description = ", weighted as #{weights_for_desc}"
+    elsif bias.present?
+      bias_description = ", biased with candidate #{bias[1]} at preference #{bias[0]}"
     end
-
-    bias_description = bias.present? ? " biased with candidate #{bias[1]} at preference #{bias[0]}" : ""
 
     logger.info { "→ #{Election.time_since(start_time)}: Generating #{iter} random ballots#{bias_description} for #{self.description}..." }
     iter.times do |i|
       candidate_ids = valid_candidates
       preferences = Random.rand(1..candidate_ids.count)
-      vote_hash = if bias.present?
-        candidate_ids = candidate_ids - [bias[1]]
-        Hash[(1..preferences).to_a.zip(candidate_ids.shuffle.first(preferences-1).insert(bias[0]-1, bias[1]))]
+      vote_hash = if weights.present? && weight_type == :inclusion
+        selections = {}
+        this_vote = {}
+        candidates_to_choose = []
+        preferences.times do
+          selection = Random.rand(weights_total)
+          candidates_to_choose << cumulative_weights.reject { |c, w| w < selection }.first.first
+        end
+
+        preferences.times do |index|
+          selection = Random.rand(weights_total)
+          selections[index] = cumulative_weights.reject { |c, w| w < selection }.first.first
+        end
+
+        selections
+      elsif weights.present? && weight_type == :exclusion
+        Hash[(1..preferences).to_a.zip(candidate_ids.shuffle.first(preferences-1))].reject! { |_, c| c.nil? || (weights[c] < Random.rand(weights_total)+1) }
+      elsif bias.present?
+        candidate_ids = candidate_ids - [bias[:candidate]]
+        Hash[(1..preferences).to_a.zip(candidate_ids.shuffle.first(preferences-1).insert(bias[:preference]-1, bias[:candidate]))]
       else
         Hash[(1..preferences).to_a.zip(candidate_ids.shuffle.first(preferences))]
       end
