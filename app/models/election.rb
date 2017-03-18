@@ -20,7 +20,7 @@ class Election < ApplicationRecord
     logger.info { "→ #{Election.time_since(start_time)}:   Loading light data..." }
 
     candidates        = Candidate.joins(:party).select("candidates.id, candidates.name, parties.name AS party")
-    candidates        = participants.present? ? candidates.where(id: participants) : all
+    candidates        = participants.present? ? candidates.where(id: participants) : candidates.all
     candidates        = candidates.map(&:attributes).map(&:symbolize_keys!)
     viable_candidates = candidates.pluck(:id)
     candidate_count   = viable_candidates.count
