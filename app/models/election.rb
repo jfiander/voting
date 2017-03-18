@@ -237,7 +237,7 @@ class Election < ApplicationRecord
     votes = []
 
     bias_description = ""
-    weights_for_desc = weights.reject { |_, c| c.nil? || c == 0 }
+    weights_for_desc = weights.reject { |_,w| w.nil? || w == 0 }
     if weights.present? && weight_type == :inclusion
       cumulative_weights = {}
       weights_total = 0
