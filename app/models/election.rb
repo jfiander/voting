@@ -314,7 +314,7 @@ class Election < ApplicationRecord
     self
   end
   
-  def self.demo(save: false)
+  def self.demo(save: false, weighted: true)
     begin
       Election.transaction do
         parties = Party.create([
@@ -329,7 +329,13 @@ class Election < ApplicationRecord
           {name: "Candidate 4", party: Party.find_by(name: "Party C")},
           {name: "Candidate 5", party: Party.find_by(name: "Party C")},
         ])
-        @demo_results = Election.create.random_gen(25000).rank(participants: candidates.map(&:id))
+        election = Election.create
+        if weighted
+          election.random_gen(25000, weights: candidates.map { |c| {c.id => Random.rand(candidates.count)+1} }.reduce({}, :merge))
+        else
+          election.random_gen(25000)
+        end
+        @demo_results = election.rank(participants: candidates.map(&:id))
         raise unless save
       end
     rescue
